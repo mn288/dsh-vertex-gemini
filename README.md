@@ -18,13 +18,17 @@ It works with the official `npx @deepseek-ai/dsh` — no fork and no build.
    gcloud auth application-default login
    ```
 
-2. Install the plugin into the Web profile:
+2. Download the plugin from this repository's releases and install it into the Web profile. The repository is private, so use the [GitHub CLI](https://cli.github.com) signed in to an account with access (or download the `.tgz` from the Releases page in the browser):
 
    ```bash
-   npx @deepseek-ai/dsh plugin --profile web add dsh-vertex-gemini
+   gh release download --repo mn288/dsh-vertex-gemini --pattern '*.tgz'
    ```
 
-   If the package was shared with you as a `.tgz` file, give its path or URL in place of the name.
+   ```bash
+   npx @deepseek-ai/dsh plugin --profile web add ./dsh-vertex-gemini-0.1.0.tgz
+   ```
+
+   To update later, download the newer release and run the same `add` command with the new file.
 
 3. Name your Google Cloud project. Either export it in the shell that starts `dsh`:
 
@@ -127,7 +131,7 @@ DSH_VERTEX_E2E=1 DSH_VERTEX_PROJECT=my-gcp-project pnpm exec vitest run tests/ad
 
 The repository is private and `package.json` carries `"private": true`, so an accidental `npm publish` is refused. To hand the plugin to colleagues:
 
-- **As a file:** `npm pack` produces `dsh-vertex-gemini-<version>.tgz`. Attach it to a release of this repository or put it on a shared drive; colleagues pass its path or URL to `dsh plugin --profile web add`.
+- **As a release (current setup):** bump `version`, run `npm pack`, and attach the `.tgz` to a new release with `gh release create v<version> dsh-vertex-gemini-<version>.tgz`. Colleagues with read access to the repository install it as shown in the setup steps.
 - **Through an internal registry:** remove `"private": true`, point `publishConfig.registry` at the registry, and publish there; colleagues then install it by name.
 
 ## License
