@@ -99,6 +99,20 @@ Any Gemini model id your project can call works even when it is not listed; the 
 | No Vertex model in the picker | No project is configured. See step 3. |
 | `UNSUPPORTED_CONTENT` | You attached an image. This plugin sends text only. |
 
+## Verification status
+
+Verified: unit tests, a Loader boot test, and an install-and-run smoke through the published `dsh` CLI against a local mock of the Vertex endpoint.
+
+Not yet verified against the real Vertex AI API. Before rolling this out, a maintainer with a valid Google login should:
+
+1. Run the real-API test (text answer, then one tool-call round trip with the signature replayed):
+
+   ```bash
+   DSH_VERTEX_E2E=1 DSH_VERTEX_PROJECT=my-gcp-project pnpm exec vitest run tests/adapter.e2e.ts
+   ```
+
+2. In a session, send a prompt that makes Gemini call several tools in one step (for example, "read these three files at once"), then send a follow-up message. The follow-up request replays that step: a call Gemini signed is sent with its signature, and a call Gemini left unsigned is sent without one. If Vertex answers the follow-up with HTTP 400 about a missing thought signature, open an issue with the error text; the replay rule lives in `serializeAssistant` in `src/serialize.ts`.
+
 ## Limitations
 
 - **Text only.** Image input is refused rather than silently dropped.
@@ -129,7 +143,7 @@ DSH_VERTEX_E2E=1 DSH_VERTEX_PROJECT=my-gcp-project pnpm exec vitest run tests/ad
 
 ### Sharing it
 
-The repository is private and `package.json` carries `"private": true`, so an accidental `npm publish` is refused. To hand the plugin to colleagues:
+The repository is private and `package.json` carries `"private": true`, so an accidental `npm publish` is refused. Colleagues need read access first: add them under the repository's **Settings → Collaborators**. To hand the plugin to them:
 
 - **As a release (current setup):** bump `version`, run `npm pack`, and attach the `.tgz` to a new release with `gh release create v<version> dsh-vertex-gemini-<version>.tgz`. Colleagues with read access to the repository install it as shown in the setup steps.
 - **Through an internal registry:** remove `"private": true`, point `publishConfig.registry` at the registry, and publish there; colleagues then install it by name.
