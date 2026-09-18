@@ -1,0 +1,6 @@
+# Mounts the Vertex AI Gemini adapter. The `vertex-ai` route stays dormant
+# until a project is known: set GOOGLE_CLOUD_PROJECT, or add an `llm-vertex:`
+# section with `project:` to $DSH_HOME/settings.yaml.
+- insert:
+    - id: llm-vertex
+      name: dsh-vertex-gemini
