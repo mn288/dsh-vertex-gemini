@@ -41,7 +41,7 @@ describe.skipIf(!ENABLED)('llm-vertex against Vertex AI', () => {
     const result = await assemble(ctx, {
       model: MODEL,
       messages: [createUserMessage({ content: [{ type: 'text', text: 'Reply with exactly: pong' }], source: { kind: 'user' } })],
-      maxTokens: 64,
+      maxTokens: 1024,
     })
     expect(result.finish).toEqual({ kind: 'stop' })
     const text = result.message.content[0]

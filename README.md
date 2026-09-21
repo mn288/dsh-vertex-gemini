@@ -8,6 +8,8 @@ It works with the official `npx @deepseek-ai/dsh` — no fork and no build.
 
 - Node.js 22.19+ or 24+.
 - The [gcloud CLI](https://cloud.google.com/sdk/docs/install).
+- [pnpm](https://pnpm.io/installation) on your PATH (`npm install -g pnpm`): the `dsh plugin` command runs it inside the profile.
+- Read access to this repository and the [GitHub CLI](https://cli.github.com) signed in (`gh auth login`), to download releases.
 - A Google Cloud project with the Vertex AI API enabled, and permission to call it (`roles/aiplatform.user`).
 
 ## Set up (about two minutes)
@@ -18,17 +20,17 @@ It works with the official `npx @deepseek-ai/dsh` — no fork and no build.
    gcloud auth application-default login
    ```
 
-2. Download the plugin from this repository's releases and install it into the Web profile. The repository is private, so use the [GitHub CLI](https://cli.github.com) signed in to an account with access (or download the `.tgz` from the Releases page in the browser):
+2. Download the latest release into a folder you will keep, then install it into the Web profile. The profile records the tarball's absolute path, so a file deleted from Downloads breaks the next profile install; `~/.dsh/plugins` is a safe home for it:
 
    ```bash
-   gh release download --repo mn288/dsh-vertex-gemini --pattern '*.tgz'
+   mkdir -p ~/.dsh/plugins
+   gh release download --repo mn288/dsh-vertex-gemini --pattern '*.tgz' --dir ~/.dsh/plugins
+   npx @deepseek-ai/dsh plugin --profile web add ~/.dsh/plugins/dsh-vertex-gemini-0.1.0.tgz
    ```
 
-   ```bash
-   npx @deepseek-ai/dsh plugin --profile web add ./dsh-vertex-gemini-0.1.0.tgz
-   ```
+   pnpm ends with a block of `missing peer @deepseek-ai/...` warnings. They are expected: those packages live one directory up in the profile tree, where Node finds them at run time. The line to look for is `+ dsh-vertex-gemini` under `dependencies`.
 
-   To update later, download the newer release and run the same `add` command with the new file.
+   To use the plugin from the terminal as well, repeat the `add` command with `--profile headless`. To update later, download the newer release into the same folder and run the same `add` command with the new file.
 
 3. Name your Google Cloud project. Either export it in the shell that starts `dsh`:
 
@@ -49,7 +51,9 @@ It works with the official `npx @deepseek-ai/dsh` — no fork and no build.
    npx @deepseek-ai/dsh web
    ```
 
-   Open the model picker and choose **Google Vertex AI → Gemini 3.8 Flash**. The choice becomes the default for new sessions.
+   If `dsh web` was already running, stop it and start it again: plugins are loaded at startup. Then open the model picker and choose **Google Vertex AI → Gemini 3.8 Flash**. The choice becomes the default for new sessions.
+
+   The picker offers the reasoning levels Low, Medium and High. A default of `xhigh` or `max` left over from another provider in `settings.yaml` makes every request fail with `UNSUPPORTED_REASONING_EFFORT`; pick a level in the picker or set `reasoningEffort: high` under `agent-default-model`.
 
 Until a project is set, the provider is listed under **Settings → Models** but no model appears in the picker. That is expected: the route stays off until it knows which project to call.
 
@@ -101,17 +105,15 @@ Any Gemini model id your project can call works even when it is not listed; the 
 
 ## Verification status
 
-Verified: unit tests, a Loader boot test, and an install-and-run smoke through the published `dsh` CLI against a local mock of the Vertex endpoint.
+Verified on 2026-09-21 against the real Vertex AI API (project `common-ai-tooling-prd`, location `global`, Gemini 3.8 Flash): the real-API test below (a text answer, then one tool-call round trip with the signature replayed) passes, and a headless `dsh` session installed from the release tarball read a file through a tool and answered correctly. Unit tests, a Loader boot test, and an install-and-run smoke against a local mock also pass.
 
-Not yet verified against the real Vertex AI API. Before rolling this out, a maintainer with a valid Google login should:
+Re-run the real-API test with a valid Google login whenever the adapter or the harness version changes:
 
-1. Run the real-API test (text answer, then one tool-call round trip with the signature replayed):
+```bash
+DSH_VERTEX_E2E=1 DSH_VERTEX_PROJECT=my-gcp-project pnpm exec vitest run tests/adapter.e2e.ts
+```
 
-   ```bash
-   DSH_VERTEX_E2E=1 DSH_VERTEX_PROJECT=my-gcp-project pnpm exec vitest run tests/adapter.e2e.ts
-   ```
-
-2. In a session, send a prompt that makes Gemini call several tools in one step (for example, "read these three files at once"), then send a follow-up message. The follow-up request replays that step: a call Gemini signed is sent with its signature, and a call Gemini left unsigned is sent without one. If Vertex answers the follow-up with HTTP 400 about a missing thought signature, open an issue with the error text; the replay rule lives in `serializeAssistant` in `src/serialize.ts`.
+Gemini 3.8 Flash counts its thinking tokens against the output cap: a request with a very small `maxTokens` can finish with `max-tokens` and no text. Leave the cap at the default (65536) or at least in the low thousands.
 
 ## Limitations
 
